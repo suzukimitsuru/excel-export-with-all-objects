@@ -8,11 +8,21 @@ Microsoft Excel の差分を見る為に、テキストファイルに書き出�
 - v0.0.1 テキストの抽出
   - セルのテキストを抽出する
   - 図形のテキストを抽出する
-- v0.0.2 修飾の抽出         <<< 今ココ！
+- v0.0.2 修飾の抽出
   - セルのテキストの修飾を抽出する(色・太字・斜体・取り消し線・下線)
   - 図形のテキストの修飾を抽出する(色・太字・斜体・取り消し線・下線)
   - コメントとスレッドを抽出する
 - v0.0.3 画像をファイルに抽出する
+
+- 他に出力したい物があれば、[issue](https://github.com/suzukimitsuru/excel-extructor-with-all-objects/issues) でリクエストして下さい。 
+
+## Excel for Mac Setup
+
+Excel for Mac で excel-extructor.xlsm を実行する場合、以下の AppleScript が必要です。  
+コピー先のフォルダにコピーして下さい。  
+
+- コピー元: `src/excel-extructor.applescript`
+- コピー先: `~/Library/Application Scripts/com.microsoft.Excel/excel-extructor.applescript/`
 
 ## Similar tools
 
