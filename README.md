@@ -1,7 +1,12 @@
 # excel-extructor-with-all-objects
 
-Microsoft Excel の差分を見る為に、テキストファイルに書き出します。  
+Microsoft Excel ブックの差分を見る為に、テキストファイルに書き出します。  
 図形や画像も含めて比較できるツールが少ないため、作成しました。  
+
+## Use caution when export
+
+画像を保存するため、クリップボードを使用しています。  
+抽出中はクリップボードを使わないで下さい。  
 
 ## Loadmap
 
@@ -13,6 +18,8 @@ Microsoft Excel の差分を見る為に、テキストファイルに書き出�
   - 図形のテキストの修飾を抽出する(色・太字・斜体・取り消し線・下線)
   - コメントとスレッドを抽出する
 - v0.0.3 画像をファイルに抽出する
+- v1.0.0 正式版
+  - 経過表示を追加しました。
 
 - 他に出力したい物があれば、[issue](https://github.com/suzukimitsuru/excel-extructor-with-all-objects/issues) でリクエストして下さい。 
 

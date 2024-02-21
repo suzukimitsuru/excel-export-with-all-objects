@@ -14,7 +14,7 @@ Sub cmdExtruct_Click()
     ' エラー処理の登録
     Dim errNumber As Integer
     On Error GoTo ErrorHandler
-    Dim textnumber As Integer
+    Dim tprogress As ProgressOfWorkbook
     
     ' OSの種類を出力
     Debug.Print ("osName(): " & osName())
@@ -22,6 +22,7 @@ Sub cmdExtruct_Click()
     ' ファイル拡張子が在ったら
     Dim filename As String
     filename = Me.Cells(2, 3).Value
+    Set tprogress.Progress = Me.Cells(3, 3)
     Dim ext_position As Long
     ext_position = InStrRev(filename, ".")
     If Len(ext_position) > 0 Then
@@ -37,9 +38,8 @@ Sub cmdExtruct_Click()
         Dim textfile As String
         textfile = osBuildPath(directory, "export.txt")
         Debug.Print ("textfile:" & textfile)
-
-        textnumber = FreeFile()
-        Open textfile For Output As #textnumber
+        tprogress.FileNumber = FreeFile()
+        Open textfile For Output As #tprogress.FileNumber
         If errNumber <= 0 Then
 
             ' Excelブックが開けたら
@@ -51,9 +51,10 @@ Sub cmdExtruct_Click()
                 categories = ShapeCategoriesInitialize()
 
                 ' 全てのシートを抽出する
+                tprogress.Sheets.Count = in_book.Sheets.Count
                 Dim osheet As Worksheet
                 For Each osheet In in_book.Sheets
-                    errNumber = ExtructSheet(textnumber, osheet, directory, categories)
+                    errNumber = ExtructSheet(tprogress, osheet, directory, categories)
                 Next osheet
 
                 ' Excelブックを閉じる
@@ -62,16 +63,17 @@ Sub cmdExtruct_Click()
             Set in_book = Nothing
 
             ' 出力したテキストファイルを閉じる
-            Close #textnumber
+            Close #tprogress.FileNumber
         End If
     End If
     
+    Set tprogress.Progress = Nothing
     On Error GoTo 0
     Exit Sub
 ErrorHandler:
     errNumber = Err.Number
-    If textnumber > 0 Then
-        Print #textnumber, "cmdExtruct_Click()  ERROR " & Err.Number & ":" & Err.Description
+    If tprogress.FileNumber > 0 Then
+        Print #tprogress.FileNumber, "cmdExtruct_Click()  ERROR " & Err.Number & ":" & Err.Description
     Else
         Debug.Print("cmdExtruct_Click()  ERROR " & Err.Number & ":" & Err.Description)
     End If
@@ -79,10 +81,10 @@ ErrorHandler:
 End Sub
 
 ''' シートの抽出
-Function ExtructSheet(textnumber As Integer, sheet As Worksheet, directory As String, ByRef categories() As ShapeCategory) As Integer
+Function ExtructSheet(ByRef tprogress As ProgressOfWorkbook, ByRef sheet As Worksheet, directory As String, ByRef categories() As ShapeCategory) As Integer
     Dim errNumber As Integer
     On Error GoTo ErrorHandler
-    Print #textnumber, sheet.CodeName & ":" & sheet.Name
+    Print #tprogress.FileNumber, sheet.CodeName & ":" & sheet.Name
 
     ' 使用領域が在ったら
     If sheet.UsedRange.Rows.Count > 0 Then
@@ -96,7 +98,7 @@ Function ExtructSheet(textnumber As Integer, sheet As Worksheet, directory As St
                 ' セルを抽出
                 Dim ocell As range
                 Set ocell = sheet.Cells(nrow, ncol)
-                errNumber = ExtructCell(textnumber, ocell, categories)
+                errNumber = ExtructCell(tprogress, ocell, categories)
                 Set ocell = Nothing
             Next ncol
         Next nrow
@@ -108,29 +110,43 @@ Function ExtructSheet(textnumber As Integer, sheet As Worksheet, directory As St
         ' 全ての図形の抽出
         Dim oshape As Shape
         For Each oshape In sheet.Shapes
-            Dim category As ShapeCategory
-            category = ShapeCategoriesFind(categories, oshape.Type)
             Dim sshape As String
             sshape = oshape.Parent.CodeName & "!" & Chr(&H22) & oshape.Name & Chr(&H22)
+            ' 代替テキスト
             Dim salternative As String
             If Len(oshape.AlternativeText) > 0 Then
-                salternative = ":" & Chr(&H22) & oshape.AlternativeText & Chr(&H22)
+                salternative = "(" & oshape.AlternativeText & ")"
             End If
+            ' 図形の種類を検索
+            Dim category As ShapeCategory
+            category = ShapeCategoriesFind(categories, oshape.Type)
+            ' グループ化の試作
+            If category.name = "Group" Then
+                Dim ogshape As Object
+                Set ogshape = oshape.GroupItems.Item(0) ' TODO: 1-count?
+                Set ogshape = Nothing
+            End If
+            ' 図形のテキスト
             Dim sframe As String
             If category.hasText Then
                 sframe = " " & Chr(&H22) & TextFrame(oshape.TextFrame) & Chr(&H22)
+            Else
+                sframe = ""
             End If
-            If category.hasImage Then
+            ' 画像を持っていて、図形のテキストが無かったら
+            If category.hasImage And (Len(sframe) <= 0) Then
+                ' 画像をクリップボードにコピー
                 oshape.Copy
+                ' クリップボードを画像ファイルに書き込む
                 Dim imagefile As String
                 imagefile = osBuildPath(directory, oshape.Parent.CodeName & "!" & oshape.Name)
                 Dim errMessage As String
                 errMessage = osClipboardToImageFile(imagefile)
                 if Len(errMessage) > 0 Then
-                    Print #textnumber, sshape & " ERROR " & errMessage
+                    Print #tprogress.FileNumber, sshape & " ERROR " & errMessage
                 End If
             End If
-            Print #textnumber, sshape & " " & category.name & salternative & sframe
+            Print #tprogress.FileNumber, sshape & " " & category.name & salternative & sframe
         Next oshape
     End If
     
@@ -139,12 +155,12 @@ Function ExtructSheet(textnumber As Integer, sheet As Worksheet, directory As St
     Exit Function
 ErrorHandler:
     errNumber = Err.Number
-    Print #textnumber, "ExtructSheet() ERROR " & Err.Number & ":" & Err.Description
+    Print #tprogress.FileNumber, "ExtructSheet() ERROR " & Err.Number & ":" & Err.Description
     Resume Next
 End Function
 
 ''' セルの抽出
-Function ExtructCell(textnumber As Integer, ocell As range, categories() As ShapeCategory) As Integer
+Function ExtructCell(ByRef tprogress As ProgressOfWorkbook, ByRef ocell As range, ByRef categories() As ShapeCategory) As Integer
     Dim errNumber As Integer
     On Error GoTo ErrorHandler
 
@@ -152,11 +168,11 @@ Function ExtructCell(textnumber As Integer, ocell As range, categories() As Shap
     Dim saddress As String
     saddress = ocell.Parent.CodeName & "!" & ocell.Address(False, False)
     If ocell.HasFormula Then
-        Print #textnumber, saddress & " " & Chr(&H22) & ocell.Value2 & Chr(&H22) & "("; ocell.Formula & ")"
+        Print #tprogress.FileNumber, saddress & " " & Chr(&H22) & ocell.Value2 & Chr(&H22) & "("; ocell.Formula & ")"
     Else
         Dim sframe As String
         sframe = TextFrame(ocell)
-        Print #textnumber, saddress & " " & Chr(&H22) & sframe & Chr(&H22)
+        Print #tprogress.FileNumber, saddress & " " & Chr(&H22) & sframe & Chr(&H22)
     End If
 
     ' コメントを抽出する
@@ -166,8 +182,8 @@ Function ExtructCell(textnumber As Integer, ocell As range, categories() As Shap
         Dim sshape As String
         sshape = saddress & " " & Chr(&H22) & ocomment.Shape.Name & Chr(&H22)
         Dim category As ShapeCategory
-        category = ShapeCategoriesFind(categories, ocomment.Shape)
-        Print #textnumber, sshape & " " & category.name & " " & ocomment.Author & ":" & Chr(&H22) & ocomment.Text & Chr(&H22)
+        category = ShapeCategoriesFind(categories, ocomment.Shape.Type)
+        Print #tprogress.FileNumber, sshape & " " & category.name & " " & ocomment.Author & ":" & Chr(&H22) & ocomment.Text & Chr(&H22)
     End If
     Set ocomment = Nothing
 
@@ -183,7 +199,7 @@ Function ExtructCell(textnumber As Integer, ocell As range, categories() As Shap
                 sreplies = sreplies  & vbLf & oreply.Date & " " & oreply.Author & ":" & oreply.Text
             Next oreply
         End If
-        Print #textnumber, saddress & " スレッド " & Chr(&H22) & sreplies & Chr(&H22)
+        Print #tprogress.FileNumber, saddress & " スレッド " & Chr(&H22) & sreplies & Chr(&H22)
     End If
     Set othread = Nothing
 
@@ -192,12 +208,12 @@ Function ExtructCell(textnumber As Integer, ocell As range, categories() As Shap
     Exit Function
 ErrorHandler:
     errNumber = Err.Number
-    Print #textnumber, "ExtructCell() ERROR " & Err.Number & ":" & Err.Description
+    Print #tprogress.FileNumber, "ExtructCell() ERROR " & Err.Number & ":" & Err.Description
     Resume Next
 End Function
 
 ' テキスト枠を文字列で返す
-Function TextFrame(vframe As Variant) As String
+Function TextFrame(ByRef vframe As Variant) As String
     TextFrame = ""
     Dim ncolor As Long
     Dim fBold As Boolean
