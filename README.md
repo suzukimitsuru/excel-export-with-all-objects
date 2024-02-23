@@ -19,13 +19,14 @@ Microsoft Excel ブックの差分を見る為に、テキストファイルに�
   - コメントとスレッドを抽出する
 - v0.0.3 画像をファイルに抽出する
 - v1.0.0 正式版
-  - 経過表示を追加しました。
+  - グループ化した図形を抽出する
+  - 経過表示を追加
 
 - 他に出力したい物があれば、[issue](https://github.com/suzukimitsuru/excel-extructor-with-all-objects/issues) でリクエストして下さい。 
 
 ## Excel for Mac Setup
 
-Excel for Mac で excel-extructor.xlsm を実行する場合、以下の AppleScript が必要です。  
+Excel for Mac で excel-extructor-mac.xlsm を実行する場合、以下の AppleScript が必要です。  
 コピー先のフォルダにコピーして下さい。  
 
 - コピー元: `src/excel-extructor.applescript`

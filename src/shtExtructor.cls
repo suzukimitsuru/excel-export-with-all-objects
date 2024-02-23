@@ -14,127 +14,135 @@ Sub cmdExtruct_Click()
     ' エラー処理の登録
     Dim errNumber As Integer
     On Error GoTo ErrorHandler
-    Dim tprogress As ProgressOfWorkbook
-    
-    ' OSの種類を出力
-    Debug.Print ("osName(): " & osName())
-    
+
     ' ファイル拡張子が在ったら
     Dim filename As String
     filename = Me.Cells(2, 3).Value
-    Set tprogress.Progress = Me.Cells(3, 3)
-    Dim ext_position As Long
-    ext_position = InStrRev(filename, ".")
-    If Len(ext_position) > 0 Then
-        Debug.Print ("filename:" & filename & ":" & ext_position)
-
-        Dim directory As String
-        directory = Left(filename, ext_position - 1)
-        Dim errMessage As String
-        errMessage = osMakeDirectory(directory)
-        Debug.Print ("osMakeDirectory(" & directory & "):" & errMessage)
-
-        ' 出力するテキストファイルが開けたら
-        Dim textfile As String
-        textfile = osBuildPath(directory, "export.txt")
-        Debug.Print ("textfile:" & textfile)
-        tprogress.FileNumber = FreeFile()
-        Open textfile For Output As #tprogress.FileNumber
+    Dim oprogress As Progress
+    Set oprogress = New Progress
+    oprogress.SetView Me.Cells(3, 3)
+    
+    ' このOSで実行出来なかったら、中断する
+    Dim serror As String
+    serror = osCanBeExecuted()
+    If Len(serror) > 0 Then
+        oprogress.ErrorView serror
+    Else
+        ' Excelブックが開けたら
+        errNumber = 0
+        Dim in_book As Workbook
+        Set in_book = Workbooks.Open(filename:=filename, ReadOnly:=True)
         If errNumber <= 0 Then
+            Me.Activate
 
-            ' Excelブックが開けたら
-            Dim in_book As Workbook
-            Set in_book = Workbooks.Open(filename:=filename, ReadOnly:=True)
-            If errNumber <= 0 Then
-                Me.Activate
-                Dim categories() As ShapeCategory
-                categories = ShapeCategoriesInitialize()
+            ' シートの内部名称が取得出来なかったら
+            If in_book.Sheets(1).CodeName = "" Then
+                oprogress.ErrorView "開発リボンの Visual Basic を開いて下さい。"
+            Else
+                ' ファイル拡張子の位置を調べる
+                Dim ext_position As Long
+                ext_position = InStrRev(filename, ".")
+                If Len(ext_position) <= 0 Then
+                    ext_position = Len(filename)
+                End If
+                Debug.Print "filename:" & filename & ":" & ext_position
 
-                ' 全てのシートを抽出する
-                tprogress.Sheets.Count = in_book.Sheets.Count
-                Dim osheet As Worksheet
-                For Each osheet In in_book.Sheets
-                    errNumber = ExtructSheet(tprogress, osheet, directory, categories)
-                Next osheet
+                ' 出力ディレクトリを作成する
+                Dim directory As String
+                directory = Left(filename, ext_position - 1)
+                Dim errMessage As String
+                errMessage = osMakeDirectory(directory)
+                Debug.Print "osMakeDirectory(" & directory & "):" & errMessage
 
-                ' Excelブックを閉じる
-                in_book.Close (False)
+                ' 出力するテキストファイルが開けたら
+                Dim textfile As String
+                textfile = osBuildPath(directory, "export.txt")
+                Debug.Print "textfile:" & textfile
+                serror = oprogress.FileOpen(textfile)
+                If Len(serror) > 0 Then
+                    oprogress.ErrorView("出力するテキストファイルが開けませんでした。" & serror)
+                Else
+                    ' 全てのシートの経過の数を集計する
+                    Dim osheet As Worksheet
+                    For Each osheet In in_book.Sheets
+                        oprogress.FilePrint osheet.CodeName & ":" & osheet.Name & " Cells:" & osheet.UsedRange.Count & " Shapes:" & osheet.UsedRange.Count
+                        oprogress.ProgressSumCount osheet.UsedRange.Count, osheet.Shapes.Count
+                    Next osheet
+
+                    ' 全てのシートを抽出する
+                    For Each osheet In in_book.Sheets
+                        errNumber = ExtructSheet(oprogress, osheet, directory)
+                        oprogress.ProgressCountupSheets
+                    Next osheet
+                    oprogress.ProgressView
+
+                    ' 出力したテキストファイルを閉じる
+                    serror = oprogress.FileClose()
+                End If
             End If
-            Set in_book = Nothing
 
-            ' 出力したテキストファイルを閉じる
-            Close #tprogress.FileNumber
+            ' Excelブックを閉じる
+            in_book.Close(False)
+            Set in_book = Nothing
+        Else
+            oprogress.ErrorView("Excel ブックが開けませんでした。")
         End If
     End If
     
-    Set tprogress.Progress = Nothing
+    Set oprogress = Nothing
     On Error GoTo 0
     Exit Sub
 ErrorHandler:
     errNumber = Err.Number
-    If tprogress.FileNumber > 0 Then
-        Print #tprogress.FileNumber, "cmdExtruct_Click()  ERROR " & Err.Number & ":" & Err.Description
+    If oprogress.FileIsOpend Then
+        oprogress.FilePrint("cmdExtruct_Click() ERROR " & Err.Number & ":" & Err.Description)
     Else
-        Debug.Print("cmdExtruct_Click()  ERROR " & Err.Number & ":" & Err.Description)
+        Debug.Print("cmdExtruct_Click() ERROR " & Err.Number & ":" & Err.Description)
     End If
     Resume Next
 End Sub
 
 ''' シートの抽出
-Function ExtructSheet(ByRef tprogress As ProgressOfWorkbook, ByRef sheet As Worksheet, directory As String, ByRef categories() As ShapeCategory) As Integer
+Function ExtructSheet(oprogress As Progress, osheet As Worksheet, directory As String) As Integer
     Dim errNumber As Integer
     On Error GoTo ErrorHandler
-    Print #tprogress.FileNumber, sheet.CodeName & ":" & sheet.Name
 
     ' 使用領域が在ったら
-    If sheet.UsedRange.Rows.Count > 0 Then
+    If osheet.UsedRange.Count > 0 Then
+        oprogress.FilePrint "--- " & osheet.CodeName & ":" & osheet.Name & " セル ---"
 
         ' 全ての使用領域で
         Dim nrow As Integer
-        For nrow = sheet.UsedRange.Row To sheet.UsedRange.Rows.Count
+        For nrow = osheet.UsedRange.Row To osheet.UsedRange.Rows.Count
             Dim ncol As Integer
-            For ncol = sheet.UsedRange.Column To sheet.UsedRange.Columns.Count
+            For ncol = osheet.UsedRange.Column To osheet.UsedRange.Columns.Count
 
                 ' セルを抽出
                 Dim ocell As range
-                Set ocell = sheet.Cells(nrow, ncol)
-                errNumber = ExtructCell(tprogress, ocell, categories)
+                Set ocell = osheet.Cells(nrow, ncol)
+                errNumber = ExtructCell(oprogress, ocell)
                 Set ocell = Nothing
+                oprogress.ProgressCountupCells
             Next ncol
+            oprogress.ProgressView
+            DoEvents
         Next nrow
     End If
     
     ' 図形が在ったら
-    If sheet.Shapes.Count > 0 Then
+    If osheet.Shapes.Count > 0 Then
+        oprogress.FilePrint "--- " & osheet.CodeName & ":" & osheet.Name & " 図形 ---"
 
         ' 全ての図形の抽出
         Dim oshape As Shape
-        For Each oshape In sheet.Shapes
+        For Each oshape In osheet.Shapes
+            Dim ssaddress As String
+            ssaddress = oshape.Parent.CodeName & "!" & ExtructShapeName(oshape)
+
+            ' 図形のテキストが無かったら
             Dim sshape As String
-            sshape = oshape.Parent.CodeName & "!" & Chr(&H22) & oshape.Name & Chr(&H22)
-            ' 代替テキスト
-            Dim salternative As String
-            If Len(oshape.AlternativeText) > 0 Then
-                salternative = "(" & oshape.AlternativeText & ")"
-            End If
-            ' 図形の種類を検索
-            Dim category As ShapeCategory
-            category = ShapeCategoriesFind(categories, oshape.Type)
-            ' グループ化の試作
-            If category.name = "Group" Then
-                Dim ogshape As Object
-                Set ogshape = oshape.GroupItems.Item(0) ' TODO: 1-count?
-                Set ogshape = Nothing
-            End If
-            ' 図形のテキスト
-            Dim sframe As String
-            If category.hasText Then
-                sframe = " " & Chr(&H22) & TextFrame(oshape.TextFrame) & Chr(&H22)
-            Else
-                sframe = ""
-            End If
-            ' 画像を持っていて、図形のテキストが無かったら
-            If category.hasImage And (Len(sframe) <= 0) Then
+            sshape = ExtructShapeText(oshape, "")
+            If Len(sshape) <= 0 Then
                 ' 画像をクリップボードにコピー
                 oshape.Copy
                 ' クリップボードを画像ファイルに書き込む
@@ -143,10 +151,15 @@ Function ExtructSheet(ByRef tprogress As ProgressOfWorkbook, ByRef sheet As Work
                 Dim errMessage As String
                 errMessage = osClipboardToImageFile(imagefile)
                 if Len(errMessage) > 0 Then
-                    Print #tprogress.FileNumber, sshape & " ERROR " & errMessage
+                    oprogress.FilePrint ssaddress & " ERROR " & errMessage
                 End If
+                oprogress.FilePrint ssaddress
+            Else
+                oprogress.FilePrint oshape.Parent.CodeName & "!" & sshape
             End If
-            Print #tprogress.FileNumber, sshape & " " & category.name & salternative & sframe
+            oprogress.ProgressCountupShapes
+            oprogress.ProgressView
+            DoEvents
         Next oshape
     End If
     
@@ -155,12 +168,12 @@ Function ExtructSheet(ByRef tprogress As ProgressOfWorkbook, ByRef sheet As Work
     Exit Function
 ErrorHandler:
     errNumber = Err.Number
-    Print #tprogress.FileNumber, "ExtructSheet() ERROR " & Err.Number & ":" & Err.Description
+    oprogress.FilePrint "ExtructSheet() ERROR " & Err.Number & ":" & Err.Description
     Resume Next
 End Function
 
 ''' セルの抽出
-Function ExtructCell(ByRef tprogress As ProgressOfWorkbook, ByRef ocell As range, ByRef categories() As ShapeCategory) As Integer
+Function ExtructCell(oprogress As Progress, ocell As range) As Integer
     Dim errNumber As Integer
     On Error GoTo ErrorHandler
 
@@ -168,22 +181,17 @@ Function ExtructCell(ByRef tprogress As ProgressOfWorkbook, ByRef ocell As range
     Dim saddress As String
     saddress = ocell.Parent.CodeName & "!" & ocell.Address(False, False)
     If ocell.HasFormula Then
-        Print #tprogress.FileNumber, saddress & " " & Chr(&H22) & ocell.Value2 & Chr(&H22) & "("; ocell.Formula & ")"
+        oprogress.FilePrint saddress & " " & Chr(&H22) & ocell.Value2 & Chr(&H22) & "(" & ocell.Formula & ")"
     Else
-        Dim sframe As String
-        sframe = TextFrame(ocell)
-        Print #tprogress.FileNumber, saddress & " " & Chr(&H22) & sframe & Chr(&H22)
+        oprogress.FilePrint saddress & " " & Chr(&H22) & ExtructFrameText(ocell) & Chr(&H22)
     End If
 
     ' コメントを抽出する
     Dim ocomment As Comment
     Set ocomment = ocell.Comment
     If Not ocomment Is Nothing Then
-        Dim sshape As String
-        sshape = saddress & " " & Chr(&H22) & ocomment.Shape.Name & Chr(&H22)
-        Dim category As ShapeCategory
-        category = ShapeCategoriesFind(categories, ocomment.Shape.Type)
-        Print #tprogress.FileNumber, sshape & " " & category.name & " " & ocomment.Author & ":" & Chr(&H22) & ocomment.Text & Chr(&H22)
+        oprogress.FilePrint saddress & " " & Chr(&H22) & ocomment.Shape.Name & Chr(&H22) & _
+            " " & ocomment.Author & ":" & Chr(&H22) & ocomment.Text & Chr(&H22)
     End If
     Set ocomment = Nothing
 
@@ -191,15 +199,9 @@ Function ExtructCell(ByRef tprogress As ProgressOfWorkbook, ByRef ocell As range
     Dim othread As CommentThreaded
     Set othread = ocell.CommentThreaded
     If Not othread Is Nothing Then
-        Dim sreplies As String
-        sreplies = sreplies & othread.Date & " " & othread.Author.Name & ":" & othread.Text
-        If othread.Replies.Count > 0 Then
-            Dim oreply As CommentThreaded
-            For Each oreply In othread.Replies
-                sreplies = sreplies  & vbLf & oreply.Date & " " & oreply.Author & ":" & oreply.Text
-            Next oreply
-        End If
-        Print #tprogress.FileNumber, saddress & " スレッド " & Chr(&H22) & sreplies & Chr(&H22)
+        Dim sthread As String
+        sthread = ExtructCommentThreaded(othread)
+        oprogress.FilePrint saddress & " スレッド " & sthread
     End If
     Set othread = Nothing
 
@@ -208,13 +210,80 @@ Function ExtructCell(ByRef tprogress As ProgressOfWorkbook, ByRef ocell As range
     Exit Function
 ErrorHandler:
     errNumber = Err.Number
-    Print #tprogress.FileNumber, "ExtructCell() ERROR " & Err.Number & ":" & Err.Description
+    oprogress.FilePrint "ExtructCell() ERROR " & Err.Number & ":" & Err.Description
     Resume Next
 End Function
 
+''' コメントスレッドの抽出
+Function ExtructCommentThreaded(othread As CommentThreaded) As String
+    On Error Resume Next
+
+    Dim sthread As String
+    sthread = sthread & othread.Date & " " & othread.Author.Name & ":" & Chr(&H22) & othread.Text & Chr(&H22)
+    If othread.Replies.Count > 0 Then
+        Dim oreply As CommentThreaded
+        For Each oreply In othread.Replies
+            sthread = sthread & vbLf & ExtructCommentThreaded(oreply)
+        Next oreply
+    End If
+
+    ExtructCommentThreaded = sthread
+    On Error GoTo 0
+End Function
+
+''' 図形のテキストを返す
+Function ExtructShapeText(oshape As Shape, sindent As String) As String
+    On Error Resume Next
+
+    ' グループ化していたら
+    Dim sgroups As String
+    If oshape.Type = msoGroup Then
+        If oshape.GroupItems.Count > 0 Then
+
+            ' 全てのグループ化した図形のテキストを抽出
+            Dim oitem As Shape
+            For Each oitem In oshape.GroupItems
+                sgroups = sgroups & vbLf & sindent  & Space(4) & ExtructShapeText(oitem, sindent & Space(4))
+            Next oitem
+        End If
+    End If
+
+    ' テキスト枠とグループのテキストが在ったら
+    Dim sshape As String
+    Dim sframe As String
+    sframe = ExtructFrameText(oshape.TextFrame)
+    If Len(sframe & sgroups) > 0 Then
+
+        ' 図形の名称
+        sshape = ExtructShapeName(oshape)
+        ' 図形のテキスト枠
+        If Len(sframe) > 0 Then
+            sshape = sshape & " " & Chr(&H22) & sframe & Chr(&H22)
+        End If
+        ' 図形のグループ
+        sshape = sshape & sgroups
+    End If
+
+    ExtructShapeText = sshape
+    On Error GoTo 0
+End Function
+
+''' 図形の名称を返す
+Function ExtructShapeName(oshape As Shape) As String
+    On Error Resume Next
+    Dim ssharp As String
+    ssharp = Chr(&H22) & oshape.Name & Chr(&H22)
+    If Len(oshape.AlternativeText) > 0 Then
+        ssharp = ssharp & "(" & oshape.AlternativeText & ")"
+    End If
+    ExtructShapeName = ssharp
+    On Error GoTo 0
+End Function
+
 ' テキスト枠を文字列で返す
-Function TextFrame(ByRef vframe As Variant) As String
-    TextFrame = ""
+Function ExtructFrameText(vframe As Variant) As String
+    On Error Resume Next
+    ExtructFrameText = ""
     Dim ncolor As Long
     Dim fBold As Boolean
     Dim fItalic As Boolean
@@ -283,5 +352,6 @@ Function TextFrame(ByRef vframe As Variant) As String
     If fItalic                              Then svalue = svalue & "</斜体>"
     If fBold                                Then svalue = svalue & "</太字>"
     If ncolor <> &H0                        Then svalue = svalue & "</色>" 
-    TextFrame = svalue
+    ExtructFrameText = svalue
+    On Error GoTo 0
 End Function

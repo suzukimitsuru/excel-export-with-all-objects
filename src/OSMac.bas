@@ -1,20 +1,24 @@
-Attribute VB_Name = "modOS"
+Attribute VB_Name = "OSMac"
 Option Explicit
 
+''' 経過型
+Public Type Progressing
+    Current As Long
+    Count As Long
+End Type
+
 ''' OSの名称を返す
-Public Function osName() As String
+Public Function osCanBeExecuted() As String
     If Application.OperatingSystem Like "*Mac*" Then
-        osName = "MacOS"
+        osCanBeExecuted = ""
     Else
-        osName = "Windows"
+        osCanBeExecuted = "Windows用を使って下さい。"
     End If
 End Function
 
 ''' ファイルパスの結合
 Public Function osBuildPath(directory As String, filename As String) As String
-    Dim sepalater As String
-    sepalater = IIf(Application.OperatingSystem Like "*Mac*", "/", "¥")
-    osBuildPath = directory & sepalater & filename
+    osBuildPath = directory & "/" & filename
 End Function 
 
 ''' ディレクトリの作成
@@ -23,11 +27,7 @@ Public Function osMakeDirectory(directory As String) As String
     osMakeDirectory = ""
     On Error GoTo ErrorHandler
 
-    If Application.OperatingSystem Like "*Mac*" Then
-        osMakeDirectory = AppleScriptTask("excel-extructor.applescript", "MakeDirectory", directory)
-    Else
-        MkDir directory
-    End If
+    osMakeDirectory = AppleScriptTask("excel-extructor.applescript", "MakeDirectory", directory)
 
     On Error GoTo 0
     Exit Function
@@ -55,16 +55,7 @@ Public Function osClipboardToImageFile(filename As String) As String
         imagefile = Replace(filename & "." & stype, " ", "_")
 
         ' 画像ファイルを書き出し
-        If Application.OperatingSystem Like "*Mac*" Then
-            osClipboardToImageFile = AppleScriptTask("excel-extructor.applescript", "ClipboardToImageFile", imagefile)
-        Else
-            Dim wscript As Object
-            Set wscript = CreateObject("WScript.Shell")
-            Dim scommand As String
-            scommand = "powershell Add-Type -AssemblyName System.Windows.Forms;$ImagePath = '" & imagefile & "';  [Windows.Forms.Clipboard]::GetImage().Save($ImagePath, [System.Drawing.Imaging.ImageFormat]::" & stype & ")"
-            wscript.Run Command:=scommand, WindowStyle:=0, WaitOnReturn:=True
-            Set wscript = Nothing
-        End If
+        osClipboardToImageFile = AppleScriptTask("excel-extructor.applescript", "ClipboardToImageFile", imagefile)
     End If
     Set formats = Nothing
 
