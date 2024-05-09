@@ -1,29 +1,23 @@
 Attribute VB_Name = "OSMac"
 Option Explicit
 
-''' çµŒéå‹
-Public Type Progressing
-    Current As Long
-    Count As Long
-End Type
-
-''' OSã®åç§°ã‚’è¿”ã™
+''' OS‚Ì–¼Ì‚ğ•Ô‚·
 Public Function osCanBeExecuted() As String
     If Application.OperatingSystem Like "*Mac*" Then
         osCanBeExecuted = ""
     Else
-        osCanBeExecuted = "Windowsç”¨ã‚’ä½¿ã£ã¦ä¸‹ã•ã„ã€‚"
+        osCanBeExecuted = "Windows—p‚ğg‚Á‚Ä‰º‚³‚¢B"
     End If
 End Function
 
-''' ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã®çµåˆ
+''' ƒtƒ@ƒCƒ‹ƒpƒX‚ÌŒ‹‡
 Public Function osBuildPath(directory As String, filename As String) As String
     osBuildPath = directory & "/" & filename
 End Function 
 
-''' ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã®ä½œæˆ
+''' ƒfƒBƒŒƒNƒgƒŠ‚Ìì¬
 Public Function osMakeDirectory(directory As String) As String
-    ' ã‚¨ãƒ©ãƒ¼å‡¦ç†ã®ç™»éŒ²
+    ' ƒGƒ‰[ˆ—‚Ì“o˜^
     osMakeDirectory = ""
     On Error GoTo ErrorHandler
 
@@ -36,25 +30,25 @@ ErrorHandler:
     Resume Next
 End Function
 
-''' ã‚¯ãƒªãƒƒãƒ—ãƒœãƒ¼ãƒ‰ã‚’ç”»åƒãƒ•ã‚¡ã‚¤ãƒ«ã«æŠ½å‡ºã™ã‚‹
+''' ƒNƒŠƒbƒvƒ{[ƒh‚ğ‰æ‘œƒtƒ@ƒCƒ‹‚É’Šo‚·‚é
 Public Function osClipboardToImageFile(filename As String) As String
-    ' ã‚¨ãƒ©ãƒ¼å‡¦ç†ã®ç™»éŒ²
+    ' ƒGƒ‰[ˆ—‚Ì“o˜^
     osClipboardToImageFile = ""
     On Error GoTo ErrorHandler
 
-    ' ã‚¯ãƒªãƒƒãƒ—ãƒœãƒ¼ãƒ‰ã«ç”»åƒãŒã‚ã‚Œã°
+    ' ƒNƒŠƒbƒvƒ{[ƒh‚É‰æ‘œ‚ª‚ ‚ê‚Î
     'Dim formats() As XlClipboardFormat
     Dim formats As Variant
     formats = Application.ClipboardFormats
     if formats(1) >= 0 Then
 
-        ' ç”»åƒãƒ•ã‚¡ã‚¤ãƒ«åã‚’ä½œæˆ
+        ' ‰æ‘œƒtƒ@ƒCƒ‹–¼‚ğì¬
         Dim stype As String
         stype = "png"
         Dim imagefile As String
         imagefile = Replace(filename & "." & stype, " ", "_")
 
-        ' ç”»åƒãƒ•ã‚¡ã‚¤ãƒ«ã‚’æ›¸ãå‡ºã—
+        ' ‰æ‘œƒtƒ@ƒCƒ‹‚ğ‘‚«o‚µ
         osClipboardToImageFile = AppleScriptTask("excel-extructor.applescript", "ClipboardToImageFile", imagefile)
     End If
     Set formats = Nothing

@@ -9,83 +9,75 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 Option Explicit
 
-''' æŠ½å‡ºãƒœã‚¿ãƒ³ã®ã‚¯ãƒªãƒƒã‚¯ã‚¤ãƒ™ãƒ³ãƒˆ
-Sub cmdExtruct_Click()
-    ' ã‚¨ãƒ©ãƒ¼å‡¦ç†ã®ç™»éŒ²
+'''  Àsƒ{ƒ^ƒ“‚ÌƒNƒŠƒbƒNƒCƒxƒ“ƒg
+Public Sub cmdExecute_Click()
+    ' ƒGƒ‰[ˆ—‚Ì“o˜^
     Dim errNumber As Integer
     On Error GoTo ErrorHandler
+    Application.ScreenUpdating = False
 
-    ' ãƒ•ã‚¡ã‚¤ãƒ«æ‹¡å¼µå­ãŒåœ¨ã£ãŸã‚‰
-    Dim filename As String
-    filename = Me.Cells(2, 3).Value
+    ' Œo‰ß•\¦ƒZƒ‹‚ğæ“¾
     Dim oprogress As Progress
     Set oprogress = New Progress
-    oprogress.SetView Me.Cells(3, 3)
+    oprogress.SetView Me.Cells(4, 3)
+    oprogress.ErrorView ""
     
-    ' ã“ã®OSã§å®Ÿè¡Œå‡ºæ¥ãªã‹ã£ãŸã‚‰ã€ä¸­æ–­ã™ã‚‹
+   ' ƒtƒ@ƒCƒ‹–¼‚ğæ“¾
+    Dim original_file As String
+    original_file = Me.Cells(2, 3).Value
+    Dim compare_file As String
+    compare_file = IIf(Me.Cells(2, 1).Value = "Compare", Me.Cells(3, 3).Value, "")
+    Me.Cells(3, 3).Value = compare_file
+
+    ' ‚±‚ÌOS‚ÅÀso—ˆ‚È‚©‚Á‚½‚çA’†’f‚·‚é
     Dim serror As String
     serror = osCanBeExecuted()
     If Len(serror) > 0 Then
+        Application.ScreenUpdating = True
         oprogress.ErrorView serror
     Else
-        ' Excelãƒ–ãƒƒã‚¯ãŒé–‹ã‘ãŸã‚‰
+        ' Œ´nƒuƒbƒN‚ªŠJ‚¯‚½‚ç
         errNumber = 0
-        Dim in_book As Workbook
-        Set in_book = Workbooks.Open(filename:=filename, ReadOnly:=True)
+        Dim original_book As Workbook
+        Set original_book = Workbooks.Open(filename:=original_file, ReadOnly:=True)
         If errNumber <= 0 Then
+            Application.ScreenUpdating = True
             Me.Activate
 
-            ' ã‚·ãƒ¼ãƒˆã®å†…éƒ¨åç§°ãŒå–å¾—å‡ºæ¥ãªã‹ã£ãŸã‚‰
-            If in_book.Sheets(1).CodeName = "" Then
-                oprogress.ErrorView "é–‹ç™ºãƒªãƒœãƒ³ã® Visual Basic ã‚’é–‹ã„ã¦ä¸‹ã•ã„ã€‚"
+            ' ƒV[ƒg‚Ì“à•”–¼Ì‚ªæ“¾o—ˆ‚È‚©‚Á‚½‚ç
+            If original_book.Sheets(1).CodeName = "" Then
+                oprogress.ErrorView "ŠJ”­ƒŠƒ{ƒ“‚Ì Visual Basic ‚ğŠJ‚¢‚Ä‰º‚³‚¢B"
             Else
-                ' ãƒ•ã‚¡ã‚¤ãƒ«æ‹¡å¼µå­ã®ä½ç½®ã‚’èª¿ã¹ã‚‹
-                Dim ext_position As Long
-                ext_position = InStrRev(filename, ".")
-                If Len(ext_position) <= 0 Then
-                    ext_position = Len(filename)
-                End If
-                Debug.Print "filename:" & filename & ":" & ext_position
+                ' ”äŠr‚È‚ç
+                If Len(compare_file) > 0 Then
 
-                ' å‡ºåŠ›ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ä½œæˆã™ã‚‹
-                Dim directory As String
-                directory = Left(filename, ext_position - 1)
-                Dim errMessage As String
-                errMessage = osMakeDirectory(directory)
-                Debug.Print "osMakeDirectory(" & directory & "):" & errMessage
+                    ' ”äŠrƒuƒbƒN‚ªŠJ‚¯‚½‚ç
+                    Dim compare_book As Workbook
+                    Set compare_book = Workbooks.Open(filename:=compare_file, ReadOnly:=True)
+                    If errNumber <= 0 Then
 
-                ' å‡ºåŠ›ã™ã‚‹ãƒ†ã‚­ã‚¹ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ãŒé–‹ã‘ãŸã‚‰
-                Dim textfile As String
-                textfile = osBuildPath(directory, "export.txt")
-                Debug.Print "textfile:" & textfile
-                serror = oprogress.FileOpen(textfile)
-                If Len(serror) > 0 Then
-                    oprogress.ErrorView("å‡ºåŠ›ã™ã‚‹ãƒ†ã‚­ã‚¹ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ãŒé–‹ã‘ã¾ã›ã‚“ã§ã—ãŸã€‚" & serror)
+                        ' ƒuƒbƒN‚ğ”äŠr‚·‚é
+                        errNumber = CompareBook(oprogress, original_book, compare_book)
+
+                        ' Œ´nƒuƒbƒN‚ğ•Â‚¶‚é
+                        compare_book.Close(False)
+                        Set compare_book = Nothing
+                    Else
+                        Application.ScreenUpdating = True
+                        oprogress.ErrorView "”äŠrƒuƒbƒN‚ªŠJ‚¯‚Ü‚¹‚ñ‚Å‚µ‚½B"
+                    End If
                 Else
-                    ' å…¨ã¦ã®ã‚·ãƒ¼ãƒˆã®çµŒéã®æ•°ã‚’é›†è¨ˆã™ã‚‹
-                    Dim osheet As Worksheet
-                    For Each osheet In in_book.Sheets
-                        oprogress.FilePrint osheet.CodeName & ":" & osheet.Name & " Cells:" & osheet.UsedRange.Count & " Shapes:" & osheet.UsedRange.Count
-                        oprogress.ProgressSumCount osheet.UsedRange.Count, osheet.Shapes.Count
-                    Next osheet
-
-                    ' å…¨ã¦ã®ã‚·ãƒ¼ãƒˆã‚’æŠ½å‡ºã™ã‚‹
-                    For Each osheet In in_book.Sheets
-                        errNumber = ExtructSheet(oprogress, osheet, directory)
-                        oprogress.ProgressCountupSheets
-                    Next osheet
-                    oprogress.ProgressView
-
-                    ' å‡ºåŠ›ã—ãŸãƒ†ã‚­ã‚¹ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‰ã˜ã‚‹
-                    serror = oprogress.FileClose()
+                    ' ƒuƒbƒN‚ğ’Šo‚·‚é
+                    errNumber = ExtructBook(oprogress, original_book, original_file)
                 End If
             End If
 
-            ' Excelãƒ–ãƒƒã‚¯ã‚’é–‰ã˜ã‚‹
-            in_book.Close(False)
-            Set in_book = Nothing
+            ' Œ´nƒuƒbƒN‚ğ•Â‚¶‚é
+            original_book.Close(False)
+            Set original_book = Nothing
         Else
-            oprogress.ErrorView("Excel ãƒ–ãƒƒã‚¯ãŒé–‹ã‘ã¾ã›ã‚“ã§ã—ãŸã€‚")
+            Application.ScreenUpdating = True
+            oprogress.ErrorView "Excel ƒuƒbƒN‚ªŠJ‚¯‚Ü‚¹‚ñ‚Å‚µ‚½B"
         End If
     End If
     
@@ -95,32 +87,104 @@ Sub cmdExtruct_Click()
 ErrorHandler:
     errNumber = Err.Number
     If oprogress.FileIsOpend Then
-        oprogress.FilePrint("cmdExtruct_Click() ERROR " & Err.Number & ":" & Err.Description)
+        oprogress.FilePrint("cmdExecute_Click() ERROR " & Err.Number & ":" & Err.Description)
     Else
-        Debug.Print("cmdExtruct_Click() ERROR " & Err.Number & ":" & Err.Description)
+        Debug.Print("cmdExecute_Click() ERROR " & Err.Number & ":" & Err.Description)
     End If
     Resume Next
 End Sub
 
-''' ã‚·ãƒ¼ãƒˆã®æŠ½å‡º
-Function ExtructSheet(oprogress As Progress, osheet As Worksheet, directory As String) As Integer
-    Dim errNumber As Integer
+''' ƒuƒbƒN‚Ì’Šo
+Private Function ExtructBook(oprogress As Progress, obook As Workbook, filename As String) As Integer
     On Error GoTo ErrorHandler
 
-    ' ä½¿ç”¨é ˜åŸŸãŒåœ¨ã£ãŸã‚‰
-    If osheet.UsedRange.Count > 0 Then
-        oprogress.FilePrint "--- " & osheet.CodeName & ":" & osheet.Name & " ã‚»ãƒ« ---"
+    ' ƒtƒ@ƒCƒ‹Šg’£q‚ÌˆÊ’u‚ğ’²‚×‚é
+    Dim ext_position As Long
+    ext_position = InStrRev(filename, ".")
+    If Len(ext_position) <= 0 Then
+        ext_position = Len(filename)
+    End If
 
-        ' å…¨ã¦ã®ä½¿ç”¨é ˜åŸŸã§
+    ' o—ÍƒfƒBƒŒƒNƒgƒŠ‚ğì¬‚·‚é
+    Dim directory As String
+    directory = Left(filename, ext_position - 1)
+    Dim serror As String
+    serror = osMakeDirectory(directory)
+    If Len(serror) > 0 Then
+        oprogress.ErrorView "o—Í‚·‚éƒfƒBƒŒƒNƒgƒŠ‚ªì‚ê‚Ü‚¹‚ñ‚Å‚µ‚½B" & serror
+    End If
+
+    ' o—Í‚·‚éƒeƒLƒXƒgƒtƒ@ƒCƒ‹‚ªŠJ‚¯‚½‚ç
+    Dim textfile As String
+    textfile = osBuildPath(directory, "export.txt")
+    serror = oprogress.FileOpen(textfile)
+    If Len(serror) > 0 Then
+        oprogress.ErrorView "o—Í‚·‚éƒeƒLƒXƒgƒtƒ@ƒCƒ‹‚ªŠJ‚¯‚Ü‚¹‚ñ‚Å‚µ‚½B" & serror
+    Else
+        ' ‘S‚Ä‚ÌƒV[ƒg‚ÌŒo‰ß‚Ì”‚ğWŒv‚·‚é
+        Dim osheet As Worksheet
+        For Each osheet In obook.Sheets
+            oprogress.FilePrint osheet.CodeName & ":" & osheet.Name & " Cells:" & osheet.UsedRange.Count & " Shapes:" & osheet.UsedRange.Count
+            oprogress.ProgressSumCount osheet.UsedRange.Count, osheet.Shapes.Count
+        Next osheet
+
+        ' ‘S‚Ä‚ÌƒV[ƒg‚ğ’Šo‚·‚é
+        For Each osheet In obook.Sheets
+            ExtructBook = ExtructSheet(oprogress, osheet, directory)
+            oprogress.ProgressCountupSheets
+        Next osheet
+        oprogress.ProgressView
+
+        ' o—Í‚µ‚½ƒeƒLƒXƒgƒtƒ@ƒCƒ‹‚ğ•Â‚¶‚é
+        serror = oprogress.FileClose()
+    End If
+
+    On Error GoTo 0
+    Exit Function
+ErrorHandler:
+    ExtructBook = Err.Number
+    oprogress.FilePrint "ExtructBook() ERROR " & Err.Number & ":" & Err.Description
+    Resume Next
+End Function
+
+''' ƒV[ƒg‚Ì’Šo
+Private Function ExtructSheet(oprogress As Progress, osheet As Worksheet, directory As String) As Integer
+    On Error GoTo ErrorHandler
+
+    ' g—p—Ìˆæ‚ªİ‚Á‚½‚ç
+    If osheet.UsedRange.Count > 0 Then
+        oprogress.FilePrint "--- " & osheet.CodeName & ":" & osheet.Name & " - ƒZƒ‹ ---"
+
+        ' ‘S‚Ä‚Ìg—p—Ìˆæ‚Å
         Dim nrow As Integer
         For nrow = osheet.UsedRange.Row To osheet.UsedRange.Rows.Count
             Dim ncol As Integer
             For ncol = osheet.UsedRange.Column To osheet.UsedRange.Columns.Count
 
-                ' ã‚»ãƒ«ã‚’æŠ½å‡º
+                ' ƒZƒ‹‚ğ’Šo
                 Dim ocell As range
                 Set ocell = osheet.Cells(nrow, ncol)
-                errNumber = ExtructCell(oprogress, ocell)
+                If ocell.Address = ocell.MergeArea(1, 1).Address Then
+
+                    ' ƒZƒ‹‚ÌƒAƒhƒŒƒX‚ğæ“¾‚·‚é
+                    Dim saddress As String
+                    saddress = ocell.Parent.CodeName & "!" & ocell.MergeArea.Address(False, False)
+                    ' ƒZƒ‹•¶š—ñ‚ğ’Šo
+                    oprogress.FilePrint saddress & " " & CellText(ocell)
+
+                    ' ƒRƒƒ“ƒg‚ªİ‚Á‚½‚çA’Šo‚·‚é
+                    If Not ocell.Comment Is Nothing Then
+                        oprogress.FilePrint saddress & " " & Chr(&H22) & ocell.Comment.Shape.Name & Chr(&H22) & _
+                            " " & ocell.Comment.Author & ":" & Chr(&H22) & ocell.Comment.Text & Chr(&H22)
+                    End If
+
+                    ' ƒXƒŒƒbƒh‚ªİ‚Á‚½‚çA’Šo‚·‚é
+                    If Not ocell.CommentThreaded Is Nothing Then
+                        Dim sthread As String
+                        sthread = CommentThreadedText(ocell.CommentThreaded)
+                        oprogress.FilePrint saddress & " ƒXƒŒƒbƒh " & sthread
+                    End If
+                End If
                 Set ocell = Nothing
                 oprogress.ProgressCountupCells
             Next ncol
@@ -129,229 +193,126 @@ Function ExtructSheet(oprogress As Progress, osheet As Worksheet, directory As S
         Next nrow
     End If
     
-    ' å›³å½¢ãŒåœ¨ã£ãŸã‚‰
+    ' }Œ`‚ªİ‚Á‚½‚ç
     If osheet.Shapes.Count > 0 Then
-        oprogress.FilePrint "--- " & osheet.CodeName & ":" & osheet.Name & " å›³å½¢ ---"
+        oprogress.FilePrint "--- " & osheet.CodeName & ":" & osheet.Name & " - }Œ` ---"
 
-        ' å…¨ã¦ã®å›³å½¢ã®æŠ½å‡º
+        ' ‘S‚Ä‚Ì}Œ`‚Ì’Šo
         Dim oshape As Shape
         For Each oshape In osheet.Shapes
-            Dim ssaddress As String
-            ssaddress = oshape.Parent.CodeName & "!" & ExtructShapeName(oshape)
-
-            ' å›³å½¢ã®ãƒ†ã‚­ã‚¹ãƒˆãŒç„¡ã‹ã£ãŸã‚‰
-            Dim sshape As String
-            sshape = ExtructShapeText(oshape, "")
-            If Len(sshape) <= 0 Then
-                ' ç”»åƒã‚’ã‚¯ãƒªãƒƒãƒ—ãƒœãƒ¼ãƒ‰ã«ã‚³ãƒ”ãƒ¼
-                oshape.Copy
-                ' ã‚¯ãƒªãƒƒãƒ—ãƒœãƒ¼ãƒ‰ã‚’ç”»åƒãƒ•ã‚¡ã‚¤ãƒ«ã«æ›¸ãè¾¼ã‚€
-                Dim imagefile As String
-                imagefile = osBuildPath(directory, oshape.Parent.CodeName & "!" & oshape.Name)
-                Dim errMessage As String
-                errMessage = osClipboardToImageFile(imagefile)
-                if Len(errMessage) > 0 Then
-                    oprogress.FilePrint ssaddress & " ERROR " & errMessage
-                End If
-                oprogress.FilePrint ssaddress
-            Else
-                oprogress.FilePrint oshape.Parent.CodeName & "!" & sshape
-            End If
+            oprogress.FilePrint ExtructShape(oshape, "", oshape.Parent.CodeName, directory)
             oprogress.ProgressCountupShapes
             oprogress.ProgressView
             DoEvents
         Next oshape
     End If
     
-    ExtructSheet = errNumber
     On Error GoTo 0
     Exit Function
 ErrorHandler:
-    errNumber = Err.Number
+    ExtructSheet = Err.Number
     oprogress.FilePrint "ExtructSheet() ERROR " & Err.Number & ":" & Err.Description
     Resume Next
 End Function
 
-''' ã‚»ãƒ«ã®æŠ½å‡º
-Function ExtructCell(oprogress As Progress, ocell As range) As Integer
-    Dim errNumber As Integer
-    On Error GoTo ErrorHandler
+''' }Œ`‚Ì’Šo
+Public Function ExtructShape(oshape As Shape, sindent As String, sheetName As String, directory As String) As String
+    On Error Resume Next
+    Dim sshape As String
 
-    ' ã‚»ãƒ«ã®å†…å®¹ã‚’æŠ½å‡ºã™ã‚‹
+    ' }Œ`‚ÌƒeƒLƒXƒg‚ğ‹‚ß‚é
     Dim saddress As String
-    saddress = ocell.Parent.CodeName & "!" & ocell.Address(False, False)
-    If ocell.HasFormula Then
-        oprogress.FilePrint saddress & " " & Chr(&H22) & ocell.Value2 & Chr(&H22) & "(" & ocell.Formula & ")"
-    Else
-        oprogress.FilePrint saddress & " " & Chr(&H22) & ExtructFrameText(ocell) & Chr(&H22)
+    saddress = sheetName & "!" & ShapeName(oshape)
+    Dim sframe As String
+    sframe = FrameText(oshape.TextFrame)
+    sshape = saddress & " " & Chr(&H22) & sframe & Chr(&H22)
+
+    ' ƒNƒŠƒbƒvƒ{[ƒh‚ğ‰æ‘œƒtƒ@ƒCƒ‹‚É‘‚«‚Ş
+    Dim errMessage As String
+    errMessage = ShapeToImageFile(oshape, osBuildPath(directory, sheetName & "!" & oshape.Name))
+    if Len(errMessage) > 0 Then
+        Debug.Print(saddress & " ERROR " & errMessage)
     End If
 
-    ' ã‚³ãƒ¡ãƒ³ãƒˆã‚’æŠ½å‡ºã™ã‚‹
-    Dim ocomment As Comment
-    Set ocomment = ocell.Comment
-    If Not ocomment Is Nothing Then
-        oprogress.FilePrint saddress & " " & Chr(&H22) & ocomment.Shape.Name & Chr(&H22) & _
-            " " & ocomment.Author & ":" & Chr(&H22) & ocomment.Text & Chr(&H22)
-    End If
-    Set ocomment = Nothing
-
-    ' ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’æŠ½å‡ºã™ã‚‹
-    Dim othread As CommentThreaded
-    Set othread = ocell.CommentThreaded
-    If Not othread Is Nothing Then
-        Dim sthread As String
-        sthread = ExtructCommentThreaded(othread)
-        oprogress.FilePrint saddress & " ã‚¹ãƒ¬ãƒƒãƒ‰ " & sthread
-    End If
-    Set othread = Nothing
-
-    ExtructCell = errNumber
-    On Error GoTo 0
-    Exit Function
-ErrorHandler:
-    errNumber = Err.Number
-    oprogress.FilePrint "ExtructCell() ERROR " & Err.Number & ":" & Err.Description
-    Resume Next
-End Function
-
-''' ã‚³ãƒ¡ãƒ³ãƒˆã‚¹ãƒ¬ãƒƒãƒ‰ã®æŠ½å‡º
-Function ExtructCommentThreaded(othread As CommentThreaded) As String
-    On Error Resume Next
-
-    Dim sthread As String
-    sthread = sthread & othread.Date & " " & othread.Author.Name & ":" & Chr(&H22) & othread.Text & Chr(&H22)
-    If othread.Replies.Count > 0 Then
-        Dim oreply As CommentThreaded
-        For Each oreply In othread.Replies
-            sthread = sthread & vbLf & ExtructCommentThreaded(oreply)
-        Next oreply
-    End If
-
-    ExtructCommentThreaded = sthread
-    On Error GoTo 0
-End Function
-
-''' å›³å½¢ã®ãƒ†ã‚­ã‚¹ãƒˆã‚’è¿”ã™
-Function ExtructShapeText(oshape As Shape, sindent As String) As String
-    On Error Resume Next
-
-    ' ã‚°ãƒ«ãƒ¼ãƒ—åŒ–ã—ã¦ã„ãŸã‚‰
-    Dim sgroups As String
+    ' ƒOƒ‹[ƒv‰»‚µ‚Ä‚¢‚½‚ç
     If oshape.Type = msoGroup Then
         If oshape.GroupItems.Count > 0 Then
 
-            ' å…¨ã¦ã®ã‚°ãƒ«ãƒ¼ãƒ—åŒ–ã—ãŸå›³å½¢ã®ãƒ†ã‚­ã‚¹ãƒˆã‚’æŠ½å‡º
+            ' ‘S‚Ä‚ÌƒOƒ‹[ƒv‰»‚µ‚½}Œ`‚ğ’Šo
             Dim oitem As Shape
             For Each oitem In oshape.GroupItems
-                sgroups = sgroups & vbLf & sindent  & Space(4) & ExtructShapeText(oitem, sindent & Space(4))
+                sshape = sshape & vbLf & sindent & vbTab & ExtructShape(oitem, sindent & vbTab, sheetName, directory)
             Next oitem
         End If
     End If
 
-    ' ãƒ†ã‚­ã‚¹ãƒˆæ ã¨ã‚°ãƒ«ãƒ¼ãƒ—ã®ãƒ†ã‚­ã‚¹ãƒˆãŒåœ¨ã£ãŸã‚‰
-    Dim sshape As String
-    Dim sframe As String
-    sframe = ExtructFrameText(oshape.TextFrame)
-    If Len(sframe & sgroups) > 0 Then
-
-        ' å›³å½¢ã®åç§°
-        sshape = ExtructShapeName(oshape)
-        ' å›³å½¢ã®ãƒ†ã‚­ã‚¹ãƒˆæ 
-        If Len(sframe) > 0 Then
-            sshape = sshape & " " & Chr(&H22) & sframe & Chr(&H22)
-        End If
-        ' å›³å½¢ã®ã‚°ãƒ«ãƒ¼ãƒ—
-        sshape = sshape & sgroups
-    End If
-
-    ExtructShapeText = sshape
+    ExtructShape = sshape
     On Error GoTo 0
 End Function
 
-''' å›³å½¢ã®åç§°ã‚’è¿”ã™
-Function ExtructShapeName(oshape As Shape) As String
-    On Error Resume Next
-    Dim ssharp As String
-    ssharp = Chr(&H22) & oshape.Name & Chr(&H22)
-    If Len(oshape.AlternativeText) > 0 Then
-        ssharp = ssharp & "(" & oshape.AlternativeText & ")"
-    End If
-    ExtructShapeName = ssharp
+''' ƒuƒbƒN‚Ì”äŠr
+Private Function CompareBook(oprogress As Progress, original As Workbook, compare As Workbook) As Integer
+    On Error GoTo ErrorHandler
+
+    ' ƒV[ƒg‚Ì•ÏX‚ğ’²¸‚·‚é
+    Dim doriginal() As CompareEntry
+    Dim dcompare() As CompareEntry
+    EnumSheets doriginal, original
+    EnumSheets dcompare, compare
+    Dim dremoves() As CompareEntry
+    Dim daddes() As CompareEntry
+    Dim dchanges() As CompareEntry
+    EnumSheets dremoves, original
+    EnumSheets daddes, compare
+    EnumSheets dchanges, original
+    ExtructChanges daddes, dremoves, dchanges, doriginal, dcompare
+
+    Dim ocompare As Worksheet
+    Set ocompare = Application.ThisWorkbook.Sheets("”äŠrŒ‹‰Ê")
+
+    ' ‘S‚Ä‚ÌƒV[ƒg‚ÌŒo‰ß‚Ì”‚ğWŒv‚·‚é
+    Dim nconpare_row As Integer
+    nconpare_row = 1
+    Dim entry As CompareEntry
+    Dim osheet As Worksheet
+    Dim index As Integer
+    For index = LBound(daddes) To UBound(daddes)
+        entry = daddes(index)
+        Set osheet = compare.Sheets(entry.Index)
+        ocompare.Cells(nconpare_row, 1).Value = "Add"
+        ocompare.Cells(nconpare_row, 2).Value = entry.Name & ":" & osheet.Name & " Cells:" & osheet.UsedRange.Count & " Shapes:" & osheet.UsedRange.Count
+        nconpare_row = nconpare_row + 1
+    Next index
+    For index = LBound(dremoves) To UBound(dremoves)
+        entry = dremoves(index)
+        Set osheet = original.Sheets(entry.Index)
+        ocompare.Cells(nconpare_row, 1).Value = "Remove"
+        ocompare.Cells(nconpare_row, 2).Value = entry.Name & ":" & osheet.Name & " Cells:" & osheet.UsedRange.Count & " Shapes:" & osheet.UsedRange.Count
+        nconpare_row = nconpare_row + 1
+    Next index
+    For index = LBound(dchanges) To UBound(dchanges)
+        entry = dchanges(index)
+        Set osheet = original.Sheets(entry.Index)
+        oprogress.ProgressSumCount osheet.UsedRange.Count, osheet.Shapes.Count
+        nconpare_row = nconpare_row + 1
+    Next index
+
+    ' •ÏX‚µ‚½ƒV[ƒg‚ğ”äŠr‚·‚é
+    Dim dchange As CompareEntry
+    For index = LBound(dchanges) To UBound(dchanges)
+        entry = dchanges(index)
+        Set osheet = original.Sheets(entry.Index)
+        oprogress.ProgressView
+        'CompareBook = ExtructSheet(oprogress, osheet, directory)
+        nconpare_row = nconpare_row + 1
+        oprogress.ProgressCountupSheets
+    Next index
+    oprogress.ProgressView
+
     On Error GoTo 0
-End Function
-
-' ãƒ†ã‚­ã‚¹ãƒˆæ ã‚’æ–‡å­—åˆ—ã§è¿”ã™
-Function ExtructFrameText(vframe As Variant) As String
-    On Error Resume Next
-    ExtructFrameText = ""
-    Dim ncolor As Long
-    Dim fBold As Boolean
-    Dim fItalic As Boolean
-    Dim fStrikethrough As Boolean
-    Dim sUnderline As XlUnderlineStyle
-    ncolor = &H0
-    fBold = False
-    fItalic = False
-    fStrikethrough = False
-    sUnderline = xlUnderlineStyleNone
-    Dim svalue As String
-    Dim nchara As Integer
-    For nchara = 1 To Len(vframe.Characters().Text)
-
-        ' é£¾ã‚Šã®çµ‚äº†
-        If sUnderline <> vframe.Characters(nchara, 1).Font.Underline Then
-            If sUnderline <> xlUnderlineStyleNone Then svalue = svalue & "</ä¸‹ç·š>"
-        End If
-        If fStrikethrough <> vframe.Characters(nchara, 1).Font.Strikethrough Then
-            If fStrikethrough Then svalue = svalue & "</å–ã‚Šæ¶ˆã—ç·š>"
-        End If
-        If fItalic <> vframe.Characters(nchara, 1).Font.Italic Then
-            If fItalic Then svalue = svalue & "</æ–œä½“>"
-        End If
-        If fBold <> vframe.Characters(nchara, 1).Font.Bold Then
-            If fBold Then svalue = svalue & "</å¤ªå­—>"
-        End If
-        If ncolor <> vframe.Characters(nchara, 1).Font.Color Then
-            If ncolor <> &H0 Then svalue = svalue & "</è‰²>"
-        End If
-
-        ' é£¾ã‚Šã®é–‹å§‹
-        If ncolor <> vframe.Characters(nchara, 1).Font.Color Then
-            ncolor = vframe.Characters(nchara, 1).Font.Color
-            If ncolor <> &H0 Then svalue = svalue & "<è‰²:0x" & Hex(ncolor) & ">"
-        End If
-        If fBold <> vframe.Characters(nchara, 1).Font.Bold Then
-            fBold = vframe.Characters(nchara, 1).Font.Bold
-            If fBold Then svalue = svalue & "<å¤ªå­—>"
-        End If
-        If fItalic <> vframe.Characters(nchara, 1).Font.Italic Then
-            fItalic = vframe.Characters(nchara, 1).Font.Italic
-            If fItalic Then svalue = svalue & "<æ–œä½“>"
-        End If
-        If fStrikethrough <> vframe.Characters(nchara, 1).Font.Strikethrough Then
-            fStrikethrough = vframe.Characters(nchara, 1).Font.Strikethrough
-            If fStrikethrough Then svalue = svalue & "<å–ã‚Šæ¶ˆã—ç·š>"
-        End If
-        If sUnderline <> vframe.Characters(nchara, 1).Font.Underline Then
-            sUnderline = vframe.Characters(nchara, 1).Font.Underline
-            Select Case sUnderline
-                Case xlUnderlineStyleDouble:            svalue = svalue & "<å¤ªã„äºŒé‡ä¸‹ç·š>"
-                Case xlUnderlineStyleDoubleAccounting:  svalue = svalue & "<ä¸¦ã‚“ã 2æœ¬ã®ç´°ã„ç·š>"
-                Case xlUnderlineStyleNone:              svalue = svalue & ""
-                Case xlUnderlineStyleSingle:            svalue = svalue & "<ä¸€é‡ä¸‹ç·š>"
-                Case xlUnderlineStyleSingleAccounting:  svalue = svalue & "<éã‚µãƒãƒ¼ãƒˆä¸‹ç·š>"
-                Case Else:                              svalue = svalue & "<ä¸æ˜ãªä¸‹ç·š>"
-            End Select
-        End If
-        svalue = svalue & vframe.Characters(nchara, 1).Text
-    Next nchara
-
-    ' é£¾ã‚Šã®çµ‚äº†
-    If sUnderline <> xlUnderlineStyleNone   Then svalue = svalue & "</ä¸‹ç·š>"
-    If fStrikethrough                       Then svalue = svalue & "</å–ã‚Šæ¶ˆã—ç·š>"
-    If fItalic                              Then svalue = svalue & "</æ–œä½“>"
-    If fBold                                Then svalue = svalue & "</å¤ªå­—>"
-    If ncolor <> &H0                        Then svalue = svalue & "</è‰²>" 
-    ExtructFrameText = svalue
-    On Error GoTo 0
+    Exit Function
+ErrorHandler:
+    CompareBook = Err.Number
+    oprogress.ErrorView "CompareBook() ERROR " & Err.Number & ":" & Err.Description
+    Resume Next
 End Function

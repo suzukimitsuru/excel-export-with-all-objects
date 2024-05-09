@@ -1,7 +1,7 @@
 Sheet2:文字飾り Cells:6 Shapes:6
-Sheet4:コメント Cells:6 Shapes:6
+Sheet4:コメント Cells:10 Shapes:10
 Sheet3:画像 Cells:110 Shapes:110
---- Sheet2:文字飾り セル ---
+--- Sheet2:文字飾り - セル ---
 Sheet2!A1 "<色:0x808080>飾り無し</色>"
 Sheet2!A2 "<色:0x808080><取り消し線>取り消し線</取り消し線></色>"
 Sheet2!A3 "<色:0x808080><斜体>斜体</斜体></色>"
@@ -10,7 +10,7 @@ Sheet2!A5 "<色:0x808080><太字><斜体>斜体で太字</斜体></太字></色>"
 Sheet2!A6 "<色:0x808080>混在
 <取り消し線>取り消し線
 </取り消し線><一重下線>下線</下線></色>"
---- Sheet4:コメント セル ---
+--- Sheet4:コメント - セル ---
 Sheet4!A1 "<色:0x808080><太字>コメント</太字></色>"
 Sheet4!B1 "<色:0x9E631C>[<取り消し線>項目</取り消し線>]</色>"
 Sheet4!B1 "Comment 1" suzuki mitsuru:"suzuki mitsuru:
@@ -22,7 +22,10 @@ Sheet4!B3 "<色:0x808080>[日付]</色>"
 Sheet4!B3 スレッド 2024/02/16 3:20:44 充 鈴木:"今日の日付を入力して下さい"
 2024/02/23 15:07:50 充 鈴木:"今日の日付を入力しました
 "
---- Sheet3:画像 セル ---
+Sheet4!A4 ""
+Sheet4!B4 ""
+Sheet4!A5:B5 "<色:0x808080><太字>セル結合</太字></色>"
+--- Sheet3:画像 - セル ---
 Sheet3!A1 "長方形"
 Sheet3!B1 ""
 Sheet3!C1 ""
@@ -133,15 +136,15 @@ Sheet3!B22 ""
 Sheet3!C22 ""
 Sheet3!D22 ""
 Sheet3!E22 ""
---- Sheet3:画像 図形 ---
+--- Sheet3:画像 - 図形 ---
 Sheet3!"Rectangular Callout 3"(吹き出しの代替えテキスト) "<色:0xFFFFFF>吹き出しです。</色>"
 Sheet3!"TextBox 4"(文字飾りの代替テキスト) "<太い二重下線>sharph</下線>Text"
 Sheet3!"Right Arrow 6"(矢印の代替えテキスト) "<色:0xFFFFFF>右向き矢印</色>"
 Sheet3!"TextBox 7"(横書きの
 代替テキスト) "横書き"
-Sheet3!"Picture 8"
-Sheet3!"Diagram 9"(ピラミッド)
-Sheet3!"Group 11"
-    "Oval 12" "<色:0xFFFFFF>丸</色>"
-    "Isosceles Triangle 13" "<色:0xFFFFFF>三角</色>"
-    "Rectangle 14" "<色:0xFFFFFF>四角</色>"
+Sheet3!"Picture 8" ""
+Sheet3!"Diagram 9"(ピラミッド) ""
+Sheet3!"Group 11" ""
+	Sheet3!"Oval 12" "<色:0xFFFFFF>丸</色>"
+	Sheet3!"Isosceles Triangle 13" "<色:0xFFFFFF>三角</色>"
+	Sheet3!"Rectangle 14" "<色:0xFFFFFF>四角</色>"

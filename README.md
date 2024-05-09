@@ -68,5 +68,9 @@ Excel for Mac で excel-extructor-mac.xlsm を実行する場合、以下の App
 - v1.0.0 正式版
   - グループ化した図形を抽出する
   - 経過表示を追加
+- v1.0.1 グループ化した図形を階層化して抽出
 
+今後実装する機能
+- v1.1.0 比較機能を追加
+ 
 - 他に出力したい物があれば、[issue](https://github.com/suzukimitsuru/excel-extructor-with-all-objects/issues) でリクエストして下さい。 
